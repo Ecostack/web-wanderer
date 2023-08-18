@@ -55,9 +55,9 @@ func downloadDomains(metadata bool, urls []*url.URL) {
 func downloadDomain(metadata bool, url *url.URL) {
 
 	filename := getFilenameFromURL(url)
-	folder_name := getFolderNameFromURL(url)
+	folderName := getFolderNameFromURL(url)
 
-	err := os.Mkdir(folder_name, 0755)
+	err := os.Mkdir(folderName, 0755)
 	if err != nil {
 		if !os.IsExist(err) {
 			fmt.Printf("Failed to create folder: %v\n", err)
@@ -134,14 +134,12 @@ type MetaData struct {
 
 func parseHTML(url *url.URL, htmlContent string) (*MetaData, string) {
 	metaData := &MetaData{}
-	// Parse the HTML content
+
 	doc, err := html.Parse(strings.NewReader(htmlContent))
 	if err != nil {
-		//fmt.Fatal("Failed to parse HTML:", err)
 		panic("Failed to parse HTML:" + err.Error())
 	}
 
-	// Traverse the parsed HTML tree recursively
 	traverseHTML(url, doc, metaData)
 
 	htmlStringNew := renderNodeToString(doc)
@@ -149,14 +147,10 @@ func parseHTML(url *url.URL, htmlContent string) (*MetaData, string) {
 }
 
 func traverseHTML(url *url.URL, node *html.Node, data *MetaData) {
-	//if node.Type == html.ElementNode {
-	//	fmt.Println("Element:", node.Data)
-	//}
 	if node.Type == html.ElementNode && node.Data == "a" {
 		data.links++
 	}
 	if node.Type == html.ElementNode && node.Data == "img" {
-		//fmt.Println("Element:", node.Data)
 		data.images++
 	}
 	if node.Type == html.ElementNode {
@@ -165,14 +159,12 @@ func traverseHTML(url *url.URL, node *html.Node, data *MetaData) {
 			if attribute.Key == "src" || (node.Data == "link" && attribute.Key == "href") {
 				newFileName := downloadAndSaveContent(url, attribute.Val)
 				attribute.Val = newFileName
-				//fmt.Println(attribute.Val)
 			}
 			newAttributes = append(newAttributes, attribute)
 		}
 		node.Attr = newAttributes
 	}
 
-	// Traverse child nodes
 	for child := node.FirstChild; child != nil; child = child.NextSibling {
 		traverseHTML(url, child, data)
 	}
@@ -193,7 +185,7 @@ func downloadAndSaveContent(url *url.URL, downloadContentURL string) string {
 		return ""
 	}
 
-	foldername := getFolderNameFromURL(url)
+	folderName := getFolderNameFromURL(url)
 	dirPath := filepath.Dir(urlParsed.Path)
 	if urlParsed.Path == "" {
 		dirPath = ""
@@ -203,12 +195,12 @@ func downloadAndSaveContent(url *url.URL, downloadContentURL string) string {
 		return ""
 	}
 
-	newFileName := foldername + urlParsed.Path
+	newFileName := folderName + urlParsed.Path
 	if urlParsed.Path == "" {
-		newFileName = foldername + downloadContentURL[1:]
+		newFileName = folderName + downloadContentURL[1:]
 	}
 
-	newFolderName := foldername + dirPath
+	newFolderName := folderName + dirPath
 
 	err = os.MkdirAll(newFolderName, 0755)
 	if err != nil {
@@ -222,7 +214,7 @@ func downloadAndSaveContent(url *url.URL, downloadContentURL string) string {
 
 	response, err := http.Get(finalDownloadUrl)
 	if err != nil {
-		fmt.Printf("Failed to send GET 123 request: %v\n", err)
+		fmt.Printf("Failed to send GET request: %v\n", err)
 		return ""
 	}
 	defer response.Body.Close()
@@ -232,8 +224,7 @@ func downloadAndSaveContent(url *url.URL, downloadContentURL string) string {
 		return ""
 	}
 
-	// Create a new file to save the downloaded content
-	file, err := os.Create(newFileName) // Replace with the desired file name
+	file, err := os.Create(newFileName)
 	if err != nil {
 		fmt.Printf("Failed to create file: %v\n", err)
 		return ""
@@ -249,7 +240,6 @@ func downloadAndSaveContent(url *url.URL, downloadContentURL string) string {
 	return newFileName
 }
 
-// Render an HTML node to a string
 func renderNodeToString(node *html.Node) string {
 	var buf bytes.Buffer
 	err := html.Render(&buf, node)
