@@ -1,3 +1,3 @@
 #!/bin/sh
 
-docker run web-wanderer --metadata https://heise.de
+docker run web-wanderer --metadata https://www.yahoo.co.jp
