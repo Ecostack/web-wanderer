@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 )
 
 func getFilenameFromURL(url *url.URL) string {
@@ -146,7 +147,7 @@ func parseHTML(url *url.URL, htmlContent string) (*MetaData, string) {
 	return metaData, htmlStringNew
 }
 
-func traverseHTML(url *url.URL, node *html.Node, data *MetaData) {
+func traverseHTML(urlData *url.URL, node *html.Node, data *MetaData) {
 	if node.Type == html.ElementNode && node.Data == "a" {
 		data.links++
 	}
@@ -157,22 +158,31 @@ func traverseHTML(url *url.URL, node *html.Node, data *MetaData) {
 		newAttributes := make([]html.Attribute, 0)
 		for _, attribute := range node.Attr {
 			if attribute.Key == "src" || (node.Data == "link" && attribute.Key == "href") {
-				newFileName := downloadAndSaveContent(url, attribute.Val)
+				newFileName := downloadAndSaveContent(urlData, attribute.Val)
 				attribute.Val = newFileName
 			}
 			newAttributes = append(newAttributes, attribute)
 		}
 		node.Attr = newAttributes
 	}
+	var wg sync.WaitGroup
 
 	for child := node.FirstChild; child != nil; child = child.NextSibling {
-		traverseHTML(url, child, data)
+		wg.Add(1)
+		go func(urlData *url.URL, child *html.Node, data *MetaData) {
+			defer wg.Done()
+			traverseHTML(urlData, child, data)
+		}(urlData, child, data)
 	}
+	wg.Wait()
 }
 
 func downloadAndSaveContent(url *url.URL, downloadContentURL string) string {
 	if downloadContentURL == "" {
 		return ""
+	}
+	if !strings.HasPrefix(downloadContentURL, "//") && !strings.HasPrefix(downloadContentURL, "/") && !strings.HasPrefix(downloadContentURL, url.Scheme) {
+		return downloadContentURL
 	}
 
 	if strings.HasPrefix(downloadContentURL, "/") && !strings.HasPrefix(downloadContentURL, "//") {
